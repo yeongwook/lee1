@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>기억을 잇는 한 가지 질문</title>
+<style>
+:root{--bg:#151515;--panel:#222;--text:#f6f1e7;--muted:#c9c1b5;--gold:#d8b35d;--ok:#5c9b72;--bad:#ae5555}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;color:var(--text)}
+.app{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;padding:2.2vh 2vw;background:radial-gradient(circle at 15% 15%,rgba(216,179,93,.08),transparent 28%),var(--bg)}
+.screen{display:none;width:min(95vw,1800px);height:min(94vh,980px);padding:clamp(28px,3vw,54px);border:1px solid #5d5546;border-radius:26px;background:linear-gradient(180deg,#202020,#181818);box-shadow:0 25px 70px rgba(0,0,0,.45);position:relative}
+.screen.active{display:flex;flex-direction:column}
+.center{margin:auto;text-align:center;max-width:1300px}
+.line{width:170px;height:4px;background:var(--gold);border-radius:999px;margin:0 auto 30px}
+h1{font-size:clamp(52px,5.3vw,98px);line-height:1.12;margin:0 0 28px;letter-spacing:-.04em}
+h2{font-size:clamp(34px,3.1vw,62px);line-height:1.3;margin:0 0 28px;letter-spacing:-.035em}
+p{font-size:clamp(22px,1.7vw,35px);line-height:1.65;color:var(--muted)}
+button{font:inherit}
+.primary{border:none;border-radius:18px;background:var(--gold);color:#211a0e;padding:22px 54px;font-size:clamp(26px,2vw,40px);font-weight:900;cursor:pointer;min-height:84px}
+.primary:active,.option:active{transform:scale(.985)}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.brand{font-size:clamp(18px,1.3vw,27px);color:var(--muted)}
+.badge{font-size:clamp(19px,1.3vw,27px);font-weight:800;color:var(--gold)}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px;flex:1;align-content:center}
+.option{min-height:clamp(110px,14vh,155px);border:1px solid #555;border-radius:22px;background:#2a2a2a;color:var(--text);padding:22px 28px;text-align:left;font-size:clamp(21px,1.55vw,32px);line-height:1.42;display:flex;align-items:center;gap:18px;cursor:pointer}
+.num{min-width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#3b3529;color:var(--gold);font-weight:900}
+.option.correct{border-color:var(--ok);background:rgba(92,155,114,.18)}
+.option.wrong{border-color:var(--bad);background:rgba(174,85,85,.18)}
+.feedback{display:none;position:absolute;inset:0;background:rgba(10,10,10,.88);align-items:center;justify-content:center;padding:4vw;z-index:10}
+.feedback.show{display:flex}
+.card{width:min(1100px,88vw);background:#222;border:1px solid #5d5546;border-radius:24px;padding:44px;text-align:center}
+.ftitle{font-size:clamp(36px,3vw,60px);font-weight:900;margin-bottom:20px}
+.ftext{font-size:clamp(21px,1.6vw,32px);line-height:1.65;color:var(--muted);margin-bottom:32px}
+.resultWord{font-size:clamp(70px,7vw,140px);font-weight:900;color:var(--gold);margin:1vh 0 2vh}
+.corner{position:absolute;right:28px;bottom:20px;color:#857c6c;font-size:16px}
+@media(max-aspect-ratio:4/3){.options{grid-template-columns:1fr}.option{min-height:94px}}
+</style>
+</head>
+<body>
+<div class="app">
+<section id="start" class="screen active">
+  <div class="center">
+    <div class="line"></div>
+    <h1>기억을 잇는<br>한 가지 질문</h1>
+    <p>전시 자료를 읽고 무작위로 출제되는 한 문제에 답해 보세요.<br>보기 중 하나를 터치하면 됩니다.</p>
+    <button class="primary" onclick="startQuiz()">퀴즈 시작하기</button>
+  </div>
+  <div class="corner">일본군 ‘위안부’ 피해자 기림의 날</div>
+</section>
+
+<section id="quiz" class="screen">
+  <div class="top">
+    <div class="brand">기억을 잇는 한 가지 질문</div>
+    <div class="badge">오늘의 문제</div>
+  </div>
+  <h2 id="question"></h2>
+  <div id="options" class="options"></div>
+  <div id="feedback" class="feedback">
+    <div class="card">
+      <div id="feedbackTitle" class="ftitle"></div>
+      <div id="feedbackText" class="ftext"></div>
+      <div style="display:flex;justify-content:center;gap:18px;flex-wrap:wrap;">
+        <button class="primary" onclick="resetQuiz()">처음 화면으로</button>
+        <button id="retryButton" class="primary" onclick="retryQuiz()" style="display:none;background:#3a3a3a;color:#f6f1e7;border:1px solid #666;">재도전하기</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+</div>
+
+<script>
+const questions = [{"q": "8월 14일이 일본군 ‘위안부’ 피해자 기림의 날이 된 계기는 무엇일까요?", "options": ["일본군 ‘위안부’ 문제가 처음 알려진 날이기 때문에", "김학순 할머니가 처음으로 ‘위안부’ 피해 사실을 공개적으로 증언한 날이기 때문에", "첫 수요시위가 열린 날이기 때문에", "평화의 소녀상이 처음 세워진 날이기 때문에"], "answer": 1, "explanation": "1991년 8월 14일 김학순 할머니가 일본군 ‘위안부’ 피해 사실을 공개적으로 증언했습니다."}, {"q": "김학순 할머니의 공개 증언이 갖는 의미로 가장 적절한 것은 무엇일까요?", "options": ["일본군 ‘위안부’ 피해에 대한 조사가 모두 끝나는 계기가 되었다.", "일본군 ‘위안부’ 문제가 이때 처음 발생하였다.", "다른 피해자들의 증언이 이어지고 문제가 국내외에 알려지는 계기가 되었다.", "평화의 소녀상이 세워지는 직접적인 계기가 되었다."], "answer": 2, "explanation": "김학순 할머니의 증언은 다른 피해자들의 증언과 일본군 ‘위안부’ 문제의 공론화로 이어지는 계기가 되었습니다."}, {"q": "수요시위에서 피해자와 시민들이 일본 정부에 요구해 온 내용으로 가장 적절한 것은 무엇일까요?", "options": ["일본에서도 기림의 날을 지정할 것", "평화의 소녀상을 일본 학교에 의무 설치할 것", "일본 정부가 공식적으로 사과하고 피해자에게 배상할 것", "수요시위를 일본에서도 매주 개최할 것"], "answer": 2, "explanation": "수요시위에서는 일본 정부의 공식 사과와 피해자에 대한 배상 등 문제 해결을 요구해 왔습니다."}, {"q": "일본 정부가 발표한 ‘무라야마 담화’의 내용으로 가장 적절한 것은 무엇일까요?", "options": ["일본군은 위안소와 전혀 관계가 없었다고 밝혔다.", "피해자들의 증언만 인정하고 일본군의 관여는 부정했다.", "일본군의 전쟁범죄에 대한 사죄와 반성의 뜻을 밝혔지만, 위안부 문제를 직접 언급하지 않았다.", "일본군 ‘위안부’를 비롯한 여러 문제에 대한 모든 배상이 완료되었다고 밝혔다."], "answer": 2, "explanation": "무라야마 담화는 일본의 식민지 지배와 침략에 대해 사죄와 반성의 뜻을 밝혔지만, 일본군 ‘위안부’ 문제를 직접 언급하지는 않았습니다."}, {"q": "고노 담화가 일본군 ‘위안부’ 문제에서 중요하게 다뤄지는 이유는 무엇일까요?", "options": ["일본의 시민단체가 처음 발표한 성명이기 때문에", "일본 정부가 최초로 일본군의 관여를 인정하고 피해자들에게 사죄와 반성의 뜻을 밝힌 공식 입장이기 때문에", "수요시위의 시작을 공식적으로 선언했기 때문에", "일본 정부가 평화의 소녀상을 건립했기 때문에"], "answer": 1, "explanation": "고노 담화는 일본 정부가 일본군의 관여를 인정하고 피해자들에게 사죄와 반성의 뜻을 밝힌 공식 입장이라는 점에서 중요합니다."}, {"q": "평화의 소녀상이 처음 세워진 것과 직접적으로 관련된 것은 무엇일까요?", "options": ["고노 담화 발표", "일본군 ‘위안부’ 피해자 기림의 날 제정", "제1000차 수요시위", "김학순 할머니의 첫 공개 증언"], "answer": 2, "explanation": "평화의 소녀상은 제1000차 수요시위를 계기로 처음 세워졌습니다."}, {"q": "평화의 소녀상 옆에 놓인 ‘빈 의자’가 의미하는 것으로 가장 적절한 것은 무엇일까요?", "options": ["수요시위에 참여하는 사람들을 위한 휴식 공간", "아직 만들어지지 않은 또 하나의 소녀상을 위한 공간", "피해자의 자리이자 피해자와 함께하는 시민의 자리", "일본 정부의 답변을 기다린다는 의미의 자리"], "answer": 2, "explanation": "빈 의자는 피해자의 자리이자 피해자와 함께 기억하고 연대하는 시민의 자리라는 의미를 지닙니다."}, {"q": "평화의 소녀상이 맨발인 채 발꿈치를 땅에서 살짝 들고 있는 모습에는 어떤 의미가 담겨 있을까요?", "options": ["언제든 앞으로 걸어 나가겠다는 의지", "수요시위에 참여하기 위해 자리에서 일어나려는 모습", "해방 이후에도 고향에 돌아오지 못하거나 정착하지 못했던 피해자들의 아픔", "어린 소녀의 활발한 모습"], "answer": 2, "explanation": "들린 발꿈치는 해방 이후에도 고향에 돌아오지 못하거나 안정적으로 정착하지 못했던 피해자들의 아픔을 나타냅니다."}, {"q": "평화의 소녀상의 소녀의 어깨 위에 앉아 있는 ‘새’는 무엇을 이어주는 매개체일까요?", "options": ["한국과 일본", "피해자와 일본 정부", "수요시위와 기림의 날", "돌아가신 할머니와 현재의 우리"], "answer": 3, "explanation": "새는 돌아가신 피해자들과 오늘을 살아가는 우리를 이어주는 매개체를 상징합니다."}, {"q": "평화의 소녀상에서 소녀의 모습과 달리 바닥의 그림자가 ‘할머니’의 모습으로 표현된 이유로 가장 적절한 것은 무엇일까요?", "options": ["피해자 대부분이 피해 당시 할머니였음을 표현하기 위해", "할머니의 한을 표현하기 위해", "현재 수요시위에 참여하는 시민들을 나타내기 위해", "소녀와 할머니가 서로 다른 인물임을 나타내기 위해"], "answer": 1, "explanation": "할머니 모습의 그림자는 피해자들이 오랜 세월 품어 온 한과 아픔을 표현합니다."}, {"q": "평화의 소녀상이 두 주먹을 쥐고 주한일본대사관을 응시하는 모습에는 어떤 의미가 담겨 있을까요?", "options": ["과거의 전쟁에 대한 분노", "일본대사관으로 이동하려는 모습", "일본 정부의 사죄를 받아내려는 모습", "수요시위가 끝나기를 기다리는 모습"], "answer": 2, "explanation": "두 주먹과 시선에는 일본 정부의 사죄를 요구하고 문제 해결을 이루려는 의지가 담겨 있습니다."}, {"q": "일본군 ‘위안부’ 피해자를 기억하는 기림비를 세우는 의미로 가장 적절한 것은 무엇일까요?", "options": ["과거의 모습을 그대로 재현하기 위해", "일본군 ‘위안부’ 문제와 관련된 날짜를 기억하기 위해", "피해자 개인의 삶만을 기록하기 위해", "일본군 ‘위안부’의 역사를 기억하고 평화와 인권이라는 문제 해결의 의미를 이어가기 위해"], "answer": 3, "explanation": "기림비 건립에는 일본군 ‘위안부’의 역사를 기억하고 평화와 인권이라는 문제 해결의 의미를 이어가려는 뜻이 담겨 있습니다."}];
+let currentQuestion = null;
+let locked = false;
+let correct = false;
+let timer = null;
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function startQuiz(){
+  clearTimeout(timer);
+  locked=false; correct=false;
+  currentQuestion = questions[Math.floor(Math.random()*questions.length)];
+  document.getElementById('question').textContent=currentQuestion.q;
+  const box=document.getElementById('options');
+  box.innerHTML='';
+  currentQuestion.options.forEach((text,i)=>{
+    const b=document.createElement('button');
+    b.className='option';
+    b.innerHTML=`<span class="num">${i+1}</span><span>${text}</span>`;
+    b.onclick=()=>choose(i,b);
+    box.appendChild(b);
+  });
+  document.getElementById('feedback').classList.remove('show');
+  show('quiz');
+}
+function choose(i,btn){
+  if(locked)return;
+  locked=true;
+  const all=[...document.querySelectorAll('.option')];
+  all[currentQuestion.answer].classList.add('correct');
+  correct = i===currentQuestion.answer;
+  if(!correct) btn.classList.add('wrong');
+  document.getElementById('feedbackTitle').textContent=correct?'정답입니다':'정답을 확인해 보세요';
+  document.getElementById('feedbackTitle').style.color=correct?'#86c49d':'#e08a8a';
+  document.getElementById('feedbackText').textContent=currentQuestion.explanation;
+  document.getElementById('retryButton').style.display = correct ? 'none' : 'inline-block';
+  setTimeout(()=>document.getElementById('feedback').classList.add('show'),300);
+}
+function retryQuiz(){
+  clearTimeout(timer);
+  const previousQuestion = currentQuestion;
+  locked = false;
+  correct = false;
+
+  if (questions.length > 1) {
+    do {
+      currentQuestion = questions[Math.floor(Math.random()*questions.length)];
+    } while (currentQuestion === previousQuestion);
+  } else {
+    currentQuestion = questions[0];
+  }
+
+  document.getElementById('question').textContent=currentQuestion.q;
+  const box=document.getElementById('options');
+  box.innerHTML='';
+  currentQuestion.options.forEach((text,i)=>{
+    const b=document.createElement('button');
+    b.className='option';
+    b.innerHTML=`<span class="num">${i+1}</span><span>${text}</span>`;
+    b.onclick=()=>choose(i,b);
+    box.appendChild(b);
+  });
+
+  document.getElementById('feedback').classList.remove('show');
+  show('quiz');
+}
+
+function resetQuiz(){
+  clearTimeout(timer);
+  show('start');
+}
+document.addEventListener('contextmenu',e=>e.preventDefault());
+</script>
+</body>
+</html>
