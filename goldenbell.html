@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>독도 골든벨</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@400;600;800&family=IBM+Plex+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one question at a time on a night-sea stage, built phone-first for students opening the link on their own.
+   Deliberately single dark theme: a broadcast quiz stage. Teacher view adds a projector leaderboard. */
+:root{
+  --sea:#081A2C; --deck:#0F2740; --deck-2:#163352; --line:#25486C;
+  --ink:#ECF3FA; --mute:#8EA7C0;
+  --bell:#F4C430; --bell-ink:#1E1600;
+  --rock:#3E8E6B; --rock-bg:#0D3328;
+  --flag-red:#E2414E; --red-bg:#3A1218; --flag-blue:#6E9FF0;
+  --f-display:"Black Han Sans","Gothic A1",system-ui,sans-serif;
+  --f-body:"Gothic A1",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{min-height:100%;margin:0}
+*{box-sizing:border-box}
+body{background:var(--sea);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  background-image:radial-gradient(900px 420px at 50% -8%, #12345a 0%, transparent 70%)}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--bell);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:12px 40px}
+.wrap.wide{max-width:1200px}
+
+header.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:6px 12px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand svg{width:32px;height:32px;flex:none}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:24px;letter-spacing:.02em;margin:0;line-height:1.1}
+.brand small{display:block;color:var(--mute);font-size:12px;letter-spacing:.06em}
+.btn{border:1px solid var(--line);background:var(--deck);padding:10px 16px;border-radius:12px;font-weight:700;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--deck-2);border-color:#3a6894}
+.btn.primary{background:var(--bell);color:var(--bell-ink);border-color:var(--bell)}
+.btn.primary:hover{background:#ffd54d}
+.btn.danger{border-color:#6b2a31;color:#ffb3b9}
+.btn.big{font-size:19px;padding:15px 24px;border-radius:14px;width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.hint{color:var(--mute);font-size:14px;margin:0}
+.stack{display:flex;flex-direction:column;gap:16px}
+
+/* start */
+.hero{text-align:center;padding:22px 8px 6px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.hero .bellbig{width:84px;height:84px}
+.hero h2{font-family:var(--f-display);font-weight:400;font-size:clamp(38px,9vw,64px);margin:0;color:var(--bell);letter-spacing:.03em;line-height:1.05}
+.hero p{margin:0;color:var(--ink);font-size:17px;word-break:keep-all;max-width:30em}
+.rules{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rules li{background:var(--deck);border:1px solid var(--line);border-radius:14px;padding:14px 12px;text-align:center;word-break:keep-all}
+.rules b{display:block;font-family:var(--f-display);font-weight:400;font-size:26px;color:var(--bell)}
+.rules span{font-size:13px;color:var(--mute)}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:14px;color:var(--mute)}
+input[type=text],textarea,.sel{background:var(--deck);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink);width:100%;box-sizing:border-box;font-size:17px}
+textarea{font-family:var(--f-num);font-size:13px;line-height:1.6;resize:vertical}
+.err{color:#ffb3b9;font-size:14px;margin:0}
+.prev{border:1px dashed var(--bell);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.prev b{color:var(--bell)}
+
+/* quiz */
+.hud{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.qno{font-family:var(--f-display);font-size:26px;color:var(--bell)}
+.qno span{color:var(--mute);font-size:.62em}
+.lives{display:flex;gap:4px;margin-left:auto}
+.lives svg{width:24px;height:24px}
+.score{font-family:var(--f-num);font-weight:700;font-size:16px;padding:6px 12px;border-radius:999px;background:var(--deck);border:1px solid var(--line)}
+.tbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin-bottom:16px}
+.tbar i{display:block;height:100%;background:var(--bell);border-radius:5px;transform-origin:left;width:100%}
+.tbar.low i{background:var(--flag-red)}
+.tnum{font-family:var(--f-num);font-weight:700;font-size:15px;color:var(--mute)}
+.qcard{background:linear-gradient(180deg,var(--deck) 0%,#0c2137 100%);border:1px solid var(--line);border-radius:18px;padding:22px 18px;display:flex;flex-direction:column;gap:18px}
+.qtext{font-weight:800;font-size:clamp(21px,5.2vw,32px);line-height:1.4;margin:0;text-wrap:balance;word-break:keep-all}
+.qtext .lead{display:block;font-size:14px;font-weight:700;color:var(--flag-blue);letter-spacing:.06em;margin-bottom:8px}
+.choices{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--sea);border:1px solid var(--line);border-radius:14px;padding:16px;font-size:clamp(17px,4.4vw,21px);font-weight:700;word-break:keep-all}
+.choice b{font-family:var(--f-num);color:var(--bell);flex:none}
+.choice:hover:not(:disabled){border-color:var(--bell)}
+.choice.right{border-color:var(--rock);background:var(--rock-bg)}
+.choice.wrong{border-color:var(--flag-red);background:var(--red-bg)}
+.choice:disabled{cursor:default}
+.oxrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.oxbtn{font-family:var(--f-display);font-size:clamp(56px,16vw,96px);line-height:1;padding:16px 8px 12px;border-radius:16px;border:1px solid var(--line);background:var(--sea)}
+.oxbtn small{display:block;font-family:var(--f-body);font-size:15px;font-weight:700;color:var(--mute);margin-top:4px}
+.oxbtn.o{color:#7fb4ff}.oxbtn.x{color:#ff8a93}
+.oxbtn:hover:not(:disabled){border-color:var(--bell)}
+.oxbtn.right{border-color:var(--rock);background:var(--rock-bg)}
+.oxbtn.wrong{border-color:var(--flag-red);background:var(--red-bg)}
+.short{display:flex;gap:10px;flex-wrap:wrap}
+.short input{flex:1 1 200px}
+.verdict{border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.verdict.ok{background:var(--rock-bg);border:1px solid var(--rock)}
+.verdict.no{background:var(--red-bg);border:1px solid var(--flag-red)}
+.verdict b{font-family:var(--f-display);font-weight:400;font-size:28px}
+.verdict.ok b{color:#9be0c2}.verdict.no b{color:#ffb3b9}
+.verdict p{margin:0;word-break:keep-all}
+.verdict .ans{font-weight:800}
+
+/* result */
+.result{position:relative;overflow:hidden;text-align:center;padding:26px 16px;border-radius:20px;background:radial-gradient(500px 240px at 50% 0%,#3a2f05,var(--deck));border:1px solid var(--bell);display:flex;flex-direction:column;align-items:center;gap:6px}
+.result.out{background:var(--deck);border-color:var(--line)}
+.result h2{font-family:var(--f-display);font-weight:400;font-size:clamp(40px,10vw,72px);color:var(--bell);margin:0;line-height:1.05}
+.result .pts{font-family:var(--f-num);font-weight:700;font-size:clamp(34px,9vw,56px)}
+.result .sub{color:var(--mute);font-size:15px;margin:0}
+.result .grade{font-weight:800;font-size:18px;margin:0}
+canvas.confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+details summary{cursor:pointer}
+.codebox{background:var(--deck);border:1px solid var(--bell);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.codebox .line{font-family:var(--f-num);font-weight:700;font-size:clamp(15px,4vw,20px);background:var(--sea);border-radius:10px;padding:12px;word-break:break-all;user-select:all}
+.review{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.review li{display:grid;grid-template-columns:36px minmax(0,1fr);gap:8px;padding:10px 12px;border-radius:12px;background:var(--deck);word-break:keep-all;font-size:14px}
+.review li .m{font-family:var(--f-num);font-weight:700}
+.review li.ok .m{color:#9be0c2}.review li.no .m{color:#ffb3b9}
+.review li small{display:block;color:var(--mute)}
+
+/* teacher */
+.tgrid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px;align-items:start}
+.panel{background:var(--deck);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.panel h2 small{font-family:var(--f-num);font-size:13px;color:var(--mute)}
+.ranks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.ranks li{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:8px;padding:12px;border-radius:12px;background:var(--sea);border:1px solid transparent;font-variant-numeric:tabular-nums}
+.ranks .r{font-family:var(--f-num);font-weight:700;color:var(--mute);text-align:center;font-size:18px}
+.ranks .n{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ranks .n small{display:block;font-weight:600;font-size:12px;color:var(--mute)}
+.ranks .s{font-family:var(--f-num);font-weight:700;font-size:18px}
+.ranks li.g1{border-color:var(--bell)} .ranks li.g1 .r{color:var(--bell)}
+.ranks li.g2 .r{color:#d3dbe4} .ranks li.g3 .r{color:#d79a63}
+.badge{display:inline-block;font-size:11px;font-weight:800;color:var(--bell-ink);background:var(--bell);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.report{font-size:14px;display:flex;flex-direction:column;gap:4px}
+.report .bad{color:#ffb3b9}
+.empty{color:var(--mute);text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:var(--bell);color:var(--bell-ink);font-weight:800;padding:12px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:20;max-width:calc(100% - 32px)}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (max-width:900px){.tgrid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:480px){.rules{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6c-2.2 0-4 1.8-4 4v1.4C19.4 13.3 14 21 14 30v12l-5 7h46l-5-7V30c0-9-5.4-16.7-14-18.6V10c0-2.2-1.8-4-4-4z" fill="#F4C430"/><circle cx="32" cy="55" r="5" fill="#F4C430"/></svg>
+      <div><h1>독도 골든벨</h1><small>10·25 독도의 날</small></div>
+    </div>
+    <button class="btn" id="soundBtn">소리 켜짐</button>
+    
+  </header>
+  <main id="app"></main>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* ---------- questions (same order for everyone) ---------- */
+const QUESTIONS = [
+  {type:"OX",ai:true,q:"독도의 날은 1905년 대한제국 칙령 반포를 기념하는 날이다.",answer:"X",why:"칙령 제41호는 1900년 10월 25일에 반포되었어요. 1905년은 일본이 시마네현 고시로 독도 편입을 시도한 해예요."},
+  {type:"OX",ai:true,q:"독도는 동도와 서도, 그리고 89개의 부속도서로 이루어져 있다.",answer:"O",why:"독도는 하나의 섬이 아니라 여러 섬의 무리예요."},
+  {type:"OX",ai:true,q:"울릉도에서 독도까지는 약 87.4km로, 일본 오키섬보다 가깝다.",answer:"O",why:"오키섬에서 독도까지는 약 157.5km예요."},
+  {type:"OX",ai:true,q:"안용복은 고려 시대의 장군이다.",answer:"X",why:"안용복은 조선 숙종 때의 어부(민간인)예요."},
+  {type:"OX",ai:true,q:"세종실록지리지에는 날씨가 맑으면 우산(독도)과 무릉(울릉도)이 서로 보인다고 적혀 있다.",answer:"O",why:"1454년에 편찬된 조선의 공식 기록이에요."},
+  {type:"OX",ai:true,q:"512년 우산국을 복속시킨 사람은 고구려 장군 을지문덕이다.",answer:"X",why:"우산국을 복속시킨 사람은 신라 장군 이사부예요(삼국사기)."},
+  {type:"OX",ai:true,q:"1877년 일본 태정관은 울릉도와 독도가 일본과 관계없다고 지시했다.",answer:"O",why:"태정관 지령. 일본 스스로 인정한 기록이에요."},
+  {type:"OX",ai:true,q:"독도 강치는 지금도 독도에서 쉽게 볼 수 있다.",answer:"X",why:"일제강점기 남획으로 수가 크게 줄어 1970년대 이후 독도에서 볼 수 없어요."},
+  {type:"OX",ai:true,q:"독도의 주소는 경상북도 울릉군 울릉읍 독도리이다.",answer:"O",why:"도로명 주소도 있어요(독도이사부길, 독도안용복길)."},
+  {type:"OX",ai:true,q:"독도의용수비대는 1953년 정부가 만든 군대이다.",answer:"X",why:"울릉도 주민들이 스스로 만든 민간 조직이에요."},
+  {type:"객관식",q:"대한제국 칙령 제41호에서 독도를 부른 이름은?",options:["우산","석도","가지도","삼봉도"],answer:2,why:"칙령에는 울도군이 '석도'를 관할한다고 적혀 있어요."},
+  {type:"객관식",q:"독도에 많이 사는 대표적인 새는?",options:["독수리","까치","두루미","괭이갈매기"],answer:4,why:"괭이갈매기는 독도의 대표적인 새예요."},
+  {type:"객관식",q:"독도의 두 큰 섬 중 더 높은 섬은?",options:["동도","서도","두 섬의 높이가 같다","알 수 없다"],answer:2,why:"서도는 약 168.5m, 동도는 약 98.6m예요."},
+  {type:"객관식",q:"1905년 일본이 독도를 불법으로 편입하려 한 문서는?",options:["태정관 지령","칙령 제41호","시마네현 고시 제40호","세종실록지리지"],answer:3,why:"일본은 1905년 시마네현 고시 제40호로 독도 편입을 시도했어요."},
+  {type:"객관식",q:"독도경비대 주소 '독도○○○길'에 들어간 신라 장군은?",options:["김유신","이사부","장보고","을지문덕"],answer:2,why:"동도의 도로명은 독도이사부길, 서도는 독도안용복길이에요."},
+  {type:"객관식",q:"조선 숙종 때 일본에 건너가 울릉도·독도가 조선 땅임을 주장한 사람은?",options:["안용복","홍순칠","최무선","장영실"],answer:1,why:"안용복은 1693년과 1696년 두 차례 일본에 건너갔어요."},
+  {type:"객관식",q:"1953년부터 독도를 지킨 독도의용수비대의 대장은?",options:["이사부","안용복","장보고","홍순칠"],answer:4,why:"홍순칠 대장과 대원들은 1956년 경찰에 경비 임무를 넘길 때까지 독도를 지켰어요."},
+  {type:"단답",q:"독도의 날은 몇 월 며칠일까요?",answer:"10월 25일",accept:["10월25일","1025","10.25","10/25","시월이십오일"],why:"1900년 10월 25일 대한제국 칙령 제41호 반포를 기념해요."},
+  {type:"단답",q:"1900년 독도를 울도군 관할로 정한 대한제국 칙령은 제 몇 호일까요? (숫자로)",answer:"제41호",accept:["41","41호","제41호","사십일호"],why:"대한제국 칙령 제41호예요."},
+  {type:"단답",q:"일제강점기 남획으로 독도에서 사라진 바다사자의 이름은?",answer:"강치",accept:["강치","독도강치"],why:"가죽과 기름을 얻으려는 대량 포획으로 사라졌어요."}
+];
+const SECONDS = 20, BASE = 10, SALT = "dokdo-1025-ulleung";
+const STORE_KEY = "dokdo-goldenbell-2026-v2";
+const GRADES = [1,2,3], CLASSES_PER_GRADE = 7;
+// ▼▼ 구글 Apps Script 웹 앱 주소를 따옴표 안에 붙여 넣으세요 (goldenbell-apps-script.gs 안내 참고)
+const API_URL = "";
+
+let screen="start";
+let run=null;            // current play
+let timer={raf:0,end:0,left:SECONDS};
+let soundOn=true, audioCtx=null;
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2600);}
+function store(get,val){ try{ if(get) return JSON.parse(localStorage.getItem(STORE_KEY)||"null"); localStorage.setItem(STORE_KEY,JSON.stringify(val)); }catch(e){ return null; } }
+const norm=s=>String(s||"").replace(/\s+/g,"").toLowerCase();
+
+/* ---------- result code ---------- */
+/* ---------- sound ---------- */
+function beep(f=880,d=.12,v=.14){ if(!soundOn) return; try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type="triangle"; o.frequency.value=f; g.gain.value=v; o.connect(g); g.connect(audioCtx.destination); o.start(); g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+d); o.stop(audioCtx.currentTime+d+.02);}catch(e){} }
+const fanfare=()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.25,.16),i*150));
+
+/* ---------- screens ---------- */
+const BELL=`<svg class="bellbig" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6c-2.2 0-4 1.8-4 4v1.4C19.4 13.3 14 21 14 30v12l-5 7h46l-5-7V30c0-9-5.4-16.7-14-18.6V10c0-2.2-1.8-4-4-4z" fill="#F4C430"/><circle cx="32" cy="55" r="5" fill="#F4C430"/></svg>`;
+const heart=on=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.4 2.6.8-1.4 2.3-2.6 4.4-2.6 3.7 0 5.8 3.8 4.3 7.3C19.5 16.4 12 21 12 21z" fill="${on?"#E2414E":"#25486C"}"/></svg>`;
+
+function render(){
+  cancelAnimationFrame(timer.raf);
+  const app=$("#app");
+  if(screen==="start") app.innerHTML=startHTML();
+  else if(screen==="q") { app.innerHTML=qHTML(); startTimer(); }
+  else if(screen==="fb") app.innerHTML=fbHTML();
+  else if(screen==="result") { app.innerHTML=resultHTML(); confetti(); if(!run.practice) sendResult(); }
+  const first=app.querySelector("[autofocus]"); if(first) first.focus();
+}
+
+function startHTML(){
+  const prev=store(true);
+  return `<div class="stack">
+    <section class="hero">${BELL}<h2>독도 골든벨</h2>
+      <p>AI가 한 말은 진짜일까 거짓말일까? 독도 문제 ${QUESTIONS.length}개를 끝까지 살아남으면 골든벨!</p></section>
+    <ul class="rules">
+      <li><b>${SECONDS}초</b><span>문제마다 제한 시간</span></li>
+      <li><b>목숨 2개</b><span>두 번 틀리면 탈락</span></li>
+      <li><b>빠를수록 +점</b><span>정답 ${BASE}점 + 남은 초</span></li>
+    </ul>
+    ${prev?`<div class="prev"><span>이 기기에서 이미 도전했어요. <b>${prev.g}학년 ${prev.c}반 ${esc(prev.name)} · ${prev.score}점</b></span>
+      <span class="hint">${prev.saved?"기록이 순위판에 저장되어 있어요.":"기록이 아직 저장되지 않았어요."} 순위에는 첫 도전 기록만 올라가요. 다시 풀면 연습 모드로 진행돼요.</span>
+      ${prev.saved?"":`<button class="btn primary" data-act="resend">기록 다시 보내기</button>`}</div>`:""}
+    <div class="row" style="flex-wrap:nowrap">
+      <label class="f" for="gr" style="flex:1">학년<select id="gr" class="sel">${GRADES.map(g=>`<option value="${g}" ${prev&&prev.g==g?"selected":""}>${g}학년</option>`).join("")}</select></label>
+      <label class="f" for="cl" style="flex:1">반<select id="cl" class="sel">${Array.from({length:CLASSES_PER_GRADE},(_,i)=>`<option value="${i+1}" ${prev&&prev.c==i+1?"selected":""}>${i+1}반</option>`).join("")}</select></label>
+    </div>
+    <label class="f" for="nm">이름
+      <input type="text" id="nm" maxlength="12" placeholder="예) 김도윤" value="${esc(prev?prev.name:"")}" autocomplete="off"></label>
+    <p class="err" id="nmErr" hidden></p>
+    <button class="btn primary big" data-act="go">${prev?"연습으로 다시 풀기":"도전 시작"}</button>
+  </div>`;
+}
+function qHTML(){
+  const q=QUESTIONS[run.qi];
+  let body="";
+  if(q.type==="OX") body=`<div class="oxrow">
+      <button class="oxbtn o" data-act="ans" data-v="O">O<small>${q.ai?"진짜":"맞다"}</small></button>
+      <button class="oxbtn x" data-act="ans" data-v="X">X<small>${q.ai?"AI 거짓말":"틀리다"}</small></button></div>`;
+  else if(q.type==="객관식") body=`<div class="choices">${q.options.map((o,i)=>`<button class="choice" data-act="ans" data-v="${i+1}"><b>${i+1}</b><span>${esc(o)}</span></button>`).join("")}</div>`;
+  else body=`<form class="short" id="shortForm"><input type="text" id="shortIn" maxlength="20" placeholder="정답을 쓰세요" autocomplete="off" autofocus><button class="btn primary" type="submit">제출</button></form>`;
+  return `${hud()}<div class="tbar" id="tbar"><i></i></div>
+  <section class="qcard"><p class="qtext">${q.ai?'<span class="lead">AI가 한 말, 진짜일까 거짓말일까?</span>':""}${esc(q.q)}</p>${body}</section>`;
+}
+function hud(){
+  return `<div class="hud"><span class="qno">Q${run.qi+1} <span>/ ${QUESTIONS.length}</span></span>
+    <span class="score">${run.score}점</span><span class="tnum" id="tnum">${SECONDS}초</span>
+    <span class="lives" aria-label="남은 목숨 ${run.lives}개">${heart(run.lives>=1)}${heart(run.lives>=2)}</span></div>`;
+}
+function ansLabel(q){
+  if(q.type==="OX") return q.ai?(q.answer==="O"?"O · 진짜":"X · AI 거짓말"):q.answer;
+  if(q.type==="객관식") return `${q.answer}번 · ${q.options[q.answer-1]}`;
+  return q.answer;
+}
+function fbHTML(){
+  const q=QUESTIONS[run.qi], last=run.log[run.log.length-1];
+  const out=run.lives<=0, end=out||run.qi>=QUESTIONS.length-1;
+  const head = last.ok ? `정답! +${last.pts}점` : (last.timeout?"시간 초과!":"아쉬워요!");
+  const extra = !last.ok && !out ? `<p>목숨이 1개 남았어요. 한 번 더 틀리면 탈락이에요.</p>` : (out?`<p>목숨을 모두 잃었어요.</p>`:"");
+  return `${hud()}<section class="qcard"><p class="qtext">${q.ai?'<span class="lead">AI가 한 말</span>':""}${esc(q.q)}</p>
+    <div class="verdict ${last.ok?"ok":"no"} ${last.ok?"":"shake"}"><b>${head}</b>
+      <p class="ans">정답: ${esc(ansLabel(q))}</p><p>${esc(q.why)}</p>${extra}</div>
+    <button class="btn primary big" data-act="next" autofocus>${end?"결과 보기":"다음 문제"}</button></section>`;
+}
+function resultHTML(){
+  const golden=run.lives>0 && run.reached===QUESTIONS.length;
+  const grade = golden?"골든벨 달성!":run.correct>=15?"독도 수호대장":run.correct>=10?"독도 지킴이":run.correct>=5?"독도 탐험가":"독도 새내기";
+  if(!run.practice && !run.stored){ run.stored=true; store(false,{g:run.g,c:run.c,name:run.name,score:run.score,correct:run.correct,reached:run.reached,at:Date.now(),saved:false}); }
+  return `<div class="stack">
+    <section class="result ${golden?"":"out"}">${golden?'<canvas class="confetti" id="confetti"></canvas>':""}${BELL}
+      <h2>${golden?"골든벨!":run.lives>0?"완주!":"탈락"}</h2>
+      <div class="pts">${run.score}점</div>
+      <p class="grade">${grade}</p>
+      <p class="sub">${run.g}학년 ${run.c}반 ${esc(run.name)} · 정답 ${run.correct}개 · Q${run.reached}까지 도전${run.practice?" · 연습 모드":""}</p>
+    </section>
+    ${run.practice?`<p class="hint" style="text-align:center">연습 모드 기록은 순위에 올라가지 않아요.</p>`:
+    `<section class="codebox" id="sendBox"><b id="sendMsg">기록 저장 중…</b><span class="hint" id="sendHint">잠시만 기다려 주세요.</span><span id="sendAct"></span></section>`}
+    <h3 style="margin:8px 0 0">문제 다시 보기</h3>
+    <ol class="review">${run.log.map(l=>{const q=QUESTIONS[l.qi];return `<li class="${l.ok?"ok":"no"}"><span class="m">Q${l.qi+1}</span><span>${esc(q.q)}<small>정답: ${esc(ansLabel(q))}${l.ok?"":" · "+esc(q.why)}</small></span></li>`;}).join("")}</ol>
+    <button class="btn big" data-act="home">처음으로</button>
+  </div>`;
+}
+
+/* ---------- save to Google Sheet ---------- */
+async function postResult(rec){
+  if(!API_URL) throw new Error("no-api");
+  const body=JSON.stringify({action:"submit",...rec});
+  try{
+    const res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body});
+    const j=await res.json(); if(!j.ok) throw Object.assign(new Error(j.error||"fail"),{server:true,reason:j.error}); return j;
+  }catch(e){
+    if(e.server) throw e;
+    await fetch(API_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body});
+    return {ok:true,opaque:true};
+  }
+}
+function markSaved(){ const p=store(true); if(p){ p.saved=true; store(false,p); } }
+async function sendResult(){
+  const msg=$("#sendMsg"), hint=$("#sendHint"), act=$("#sendAct");
+  const set=(m,h,a="")=>{ if(msg) msg.textContent=m; if(hint) hint.textContent=h; if(act) act.innerHTML=a; };
+  if(!API_URL){ set("기록을 저장할 주소가 아직 없어요","선생님께 알려 주세요. (API_URL 미설정)"); return; }
+  set("기록 저장 중…","잠시만 기다려 주세요.");
+  try{
+    const r=await postResult({g:run.g,c:run.c,name:run.name,score:run.score,correct:run.correct,reached:run.reached});
+    markSaved();
+    set(r.dup?"이미 저장된 기록이 있어요":"기록 저장 완료!", r.dup?"같은 학년·반·이름으로는 첫 기록만 순위에 올라가요.":"순위판에서 내 순위를 확인해 보세요.");
+  }catch(e){
+    set("기록을 저장하지 못했어요", e.reason==="invalid"?"입력한 정보를 확인해 주세요.":"인터넷 연결을 확인하고 다시 보내기를 눌러 주세요.", `<button class="btn primary" data-act="retry">다시 보내기</button>`);
+  }
+}
+async function resendPrev(btn){
+  const p=store(true); if(!p) return; btn.disabled=true; btn.textContent="보내는 중…";
+  try{ await postResult({g:p.g,c:p.c,name:p.name,score:p.score,correct:p.correct,reached:p.reached}); markSaved(); toast("기록을 저장했어요"); screen="start"; render(); }
+  catch(e){ btn.disabled=false; btn.textContent="기록 다시 보내기"; toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요"); }
+}
+
+/* ---------- play ---------- */
+function begin(){
+  const name=$("#nm").value.trim().replace(/\s+/g," ");
+  if(name.length<2){ const e=$("#nmErr"); e.textContent="이름을 써 주세요."; e.hidden=false; return; }
+  const prev=store(true);
+  run={g:+$("#gr").value,c:+$("#cl").value,name,qi:0,score:0,correct:0,reached:0,lives:2,log:[],practice:!!prev};
+  beep(660,.1); screen="q"; render();
+}
+function startTimer(){
+  timer.end=performance.now()+SECONDS*1000; timer.left=SECONDS; let lastS=SECONDS;
+  const step=()=>{
+    timer.left=Math.max(0,(timer.end-performance.now())/1000);
+    const bar=$("#tbar"); if(!bar) return;
+    bar.querySelector("i").style.transform=`scaleX(${timer.left/SECONDS})`;
+    bar.classList.toggle("low",timer.left<=5);
+    const s=Math.ceil(timer.left); if(s!==lastS){ lastS=s; $("#tnum").textContent=s+"초"; if(s<=5&&s>0) beep(880,.07,.1); }
+    if(timer.left<=0){ answer(null,true); return; }
+    timer.raf=requestAnimationFrame(step);
+  };
+  timer.raf=requestAnimationFrame(step);
+  const f=$("#shortForm"); if(f) f.onsubmit=e=>{ e.preventDefault(); const v=$("#shortIn").value.trim(); if(v) answer(v); };
+}
+function isRight(q,v){
+  if(v==null) return false;
+  if(q.type==="OX") return v===q.answer;
+  if(q.type==="객관식") return +v===q.answer;
+  const n=norm(v).replace(/[제호]/g,""), list=[q.answer,...(q.accept||[])].map(a=>norm(a).replace(/[제호]/g,""));
+  return list.includes(n);
+}
+function answer(v,timeout){
+  cancelAnimationFrame(timer.raf);
+  if(screen!=="q") return;
+  const q=QUESTIONS[run.qi], ok=!timeout&&isRight(q,v);
+  const pts= ok ? BASE+Math.floor(timer.left) : 0;
+  run.reached=run.qi+1;
+  if(ok){ run.score+=pts; run.correct++; beep(1046,.18); } else { run.lives--; beep(220,.35,.16); }
+  run.log.push({qi:run.qi,ok,pts,timeout:!!timeout});
+  screen="fb"; render();
+}
+function nextQ(){
+  if(run.lives<=0||run.qi>=QUESTIONS.length-1){ screen="result"; if(run.lives>0&&run.reached===QUESTIONS.length) fanfare(); render(); return; }
+  run.qi++; screen="q"; render();
+}
+
+/* ---------- confetti ---------- */
+function confetti(){
+  const c=$("#confetti"); if(!c||matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const x=c.getContext("2d"), W=c.width=c.offsetWidth*devicePixelRatio, H=c.height=c.offsetHeight*devicePixelRatio;
+  const cols=["#F4C430","#E2414E","#6E9FF0","#3E8E6B","#fff"];
+  const ps=Array.from({length:120},()=>({x:Math.random()*W,y:-Math.random()*H,r:(4+Math.random()*5)*devicePixelRatio,v:(1.5+Math.random()*3)*devicePixelRatio,a:Math.random()*6,c:cols[Math.random()*5|0]}));
+  let f=0;(function loop(){ if(!document.body.contains(c)) return; x.clearRect(0,0,W,H); ps.forEach(p=>{p.y+=p.v;p.x+=Math.sin(p.a+=.05);if(p.y>H)p.y=-10;x.fillStyle=p.c;x.fillRect(p.x,p.y,p.r,p.r*.6);}); if(++f<500) requestAnimationFrame(loop); else x.clearRect(0,0,W,H); })();
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  const a=b.dataset.act;
+  if(a==="go") begin();
+  else if(a==="ans"){ if(screen!=="q") return; b.closest("section").querySelectorAll("button").forEach(x=>x.disabled=true); answer(b.dataset.v); }
+  else if(a==="next") nextQ();
+  else if(a==="home"){ screen="start"; render(); }
+  else if(a==="resend") resendPrev(b);
+  else if(a==="retry") sendResult();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && screen==="start" && e.target.id==="nm"){ e.preventDefault(); begin(); }
+});
+$("#soundBtn").onclick=()=>{ soundOn=!soundOn; $("#soundBtn").textContent=soundOn?"소리 켜짐":"소리 꺼짐"; };
+
+/* ---------- boot ---------- */
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>독도 골든벨 순위판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@400;600;800&family=IBM+Plex+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: projector scoreboard. QR + stats rail on the left, individual podium and list in the middle, class ranking on the right.
+   Deliberately single dark theme to match the quiz stage and read well on a projector. */
+:root{
+  --sea:#081A2C; --deck:#0F2740; --deck-2:#163352; --line:#25486C;
+  --ink:#ECF3FA; --mute:#8EA7C0;
+  --bell:#F4C430; --bell-ink:#1E1600; --silver:#D3DBE4; --bronze:#D79A63;
+  --rock:#3E8E6B; --rock-bg:#0D3328; --red:#E2414E; --blue:#6E9FF0;
+  --f-display:"Black Han Sans","Gothic A1",system-ui,sans-serif;
+  --f-body:"Gothic A1",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{min-height:100%;margin:0}
+*{box-sizing:border-box}
+body{background:var(--sea);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  background-image:radial-gradient(1100px 460px at 50% -10%, #12345a 0%, transparent 70%)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--bell);outline-offset:2px}
+.wrap{max-width:1500px;margin:0 auto;padding-inline:16px;padding-block:12px 40px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand svg{width:36px;height:36px;flex:none}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:clamp(24px,3vw,34px);margin:0;letter-spacing:.02em;line-height:1.1}
+.brand small{display:block;color:var(--mute);font-size:12px;letter-spacing:.06em}
+.btn{border:1px solid var(--line);background:var(--deck);padding:10px 16px;border-radius:12px;font-weight:700}
+.btn:hover{background:var(--deck-2);border-color:#3a6894}
+.btn.primary{background:var(--bell);border-color:var(--bell);color:var(--bell-ink)}
+.btn.danger{border-color:#6b2a31;color:#ffb3b9}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.sync{font-size:13px;color:var(--mute);padding:6px 12px;border:1px solid var(--line);border-radius:999px}
+.sync.ok{color:#9be0c2;border-color:#2c6b52}
+.sync.warn{color:#ffd27a;border-color:#6b5a2c}
+
+.board{display:grid;grid-template-columns:280px minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.panel{background:var(--deck);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.panel h2 small{font-family:var(--f-body);font-size:13px;color:var(--mute);font-weight:600}
+.qr{background:#fff;border-radius:14px;padding:12px;display:grid;place-items:center;aspect-ratio:1}
+.qr img,.qr canvas{width:100%!important;height:auto!important;image-rendering:pixelated}
+.qr .none{color:#33485A;font-size:14px;text-align:center}
+.qrcap{text-align:center;font-weight:800;font-size:16px;margin:0}
+.link{font-family:var(--f-num);font-size:11px;color:var(--mute);word-break:break-all;margin:0;text-align:center}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--sea);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-family:var(--f-num);font-size:26px;line-height:1.1}
+.stat span{font-size:12px;color:var(--mute);font-weight:600}
+
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px;align-items:end}
+.pod{border-radius:16px;padding:14px 10px;text-align:center;background:var(--sea);border:1px solid var(--line);min-width:0}
+.pod .medal{font-family:var(--f-display);font-size:30px;line-height:1}
+.pod .nm{font-weight:800;font-size:clamp(16px,1.8vw,22px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pod .cl{font-size:13px;color:var(--mute);font-weight:600}
+.pod .sc{font-family:var(--f-num);font-weight:700;font-size:clamp(22px,2.4vw,32px)}
+.pod.p1{border-color:var(--bell);background:linear-gradient(180deg,#3a2f05,var(--sea));padding-block:22px}
+.pod.p1 .medal{color:var(--bell)} .pod.p2 .medal{color:var(--silver)} .pod.p3 .medal{color:var(--bronze)}
+.pod.empty{opacity:.35}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.list li{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 12px;border-radius:12px;background:var(--sea);font-variant-numeric:tabular-nums}
+.list .r{font-family:var(--f-num);font-weight:700;color:var(--mute);text-align:center;font-size:17px}
+.list .n{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .n small{font-weight:600;color:var(--mute);margin-left:6px;font-size:13px}
+.list .s{font-family:var(--f-num);font-weight:700;font-size:18px;text-align:right}
+.list .x{font-size:12px;color:var(--mute);text-align:right;min-width:64px}
+.badge{display:inline-block;font-size:11px;font-weight:800;color:var(--bell-ink);background:var(--bell);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.more{color:var(--mute);font-size:13px;text-align:center}
+
+.classes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.classes li{display:grid;grid-template-columns:40px 78px minmax(0,1fr) 64px;gap:10px;align-items:center;padding:9px 12px;border-radius:12px;background:var(--sea);font-variant-numeric:tabular-nums}
+.classes .r{font-family:var(--f-num);font-weight:700;color:var(--mute);text-align:center;font-size:17px}
+.classes li.c1{outline:2px solid var(--bell)} .classes li.c1 .r{color:var(--bell)} .classes li.c2 .r{color:var(--silver)} .classes li.c3 .r{color:var(--bronze)}
+.classes .k{font-weight:800}
+.meter{position:relative;height:22px;border-radius:6px;background:var(--deck-2);overflow:hidden}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--blue);border-radius:6px}
+.classes li.c1 .meter i{background:var(--bell)}
+.meter em{position:absolute;left:8px;top:0;bottom:0;display:flex;align-items:center;font-style:normal;font-size:12px;font-weight:700;color:var(--ink);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.classes .v{font-family:var(--f-num);font-weight:700;font-size:17px;text-align:right}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
+.seg button{border:0;background:none;padding:6px 10px;color:var(--mute);font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--deck-2);color:var(--bell)}
+.empty{color:var(--mute);text-align:center;padding:26px 12px;border:1px dashed var(--line);border-radius:14px;word-break:keep-all}
+
+/* admin */
+.admin{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.admin label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px;color:var(--mute)}
+.admin input[type=text],.admin textarea{background:var(--sea);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;box-sizing:border-box;color:var(--ink)}
+.admin textarea{font-family:var(--f-num);font-size:12px;resize:vertical}
+.hint{color:var(--mute);font-size:13px;margin:0;word-break:keep-all}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.report{font-size:13px;display:flex;flex-direction:column;gap:2px}
+.report .bad{color:#ffb3b9}
+.steps{margin:0;padding-left:18px;font-size:13px;color:var(--ink);display:flex;flex-direction:column;gap:3px}
+.tbl{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{position:sticky;top:0;background:var(--deck);font-size:12px;color:var(--mute)}
+td.num{font-family:var(--f-num)}
+td button{border:1px solid var(--line);background:none;border-radius:8px;padding:3px 8px;font-size:12px;color:#ffb3b9}
+
+/* reveal */
+.reveal{display:flex;flex-direction:column;gap:16px;position:relative}
+.reveal h2{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,4vw,52px);margin:0;text-align:center;color:var(--bell)}
+.reveal .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.rv{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:16px 18px;border-radius:16px;background:var(--deck);border:1px solid var(--line);transition:transform .35s,opacity .35s}
+.rv.hide{opacity:.25}
+.rv.hide .k,.rv.hide .v{filter:blur(8px)}
+.rv .r{font-family:var(--f-display);font-size:34px;color:var(--mute);text-align:center}
+.rv .k{font-family:var(--f-display);font-size:30px}
+.rv .k small{display:block;font-family:var(--f-body);font-size:13px;color:var(--mute)}
+.rv .v{font-family:var(--f-num);font-weight:700;font-size:26px}
+.rv.top{border-color:var(--bell);background:linear-gradient(180deg,#3a2f05,var(--deck))}
+.rv.top .r{color:var(--bell)}
+.rv.just{transform:scale(1.03);border-color:var(--bell)}
+canvas.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:var(--bell);color:var(--bell-ink);font-weight:800;padding:12px 18px;border-radius:12px;z-index:40;max-width:calc(100% - 32px)}
+@media (max-width:1180px){.board{grid-template-columns:260px minmax(0,1fr)} .board .clsPanel{grid-column:1/-1}}
+@media (max-width:760px){.board{grid-template-columns:minmax(0,1fr)} .qrPanel{order:3}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6c-2.2 0-4 1.8-4 4v1.4C19.4 13.3 14 21 14 30v12l-5 7h46l-5-7V30c0-9-5.4-16.7-14-18.6V10c0-2.2-1.8-4-4-4z" fill="#F4C430"/><circle cx="32" cy="55" r="5" fill="#F4C430"/></svg>
+      <div><h1>독도 골든벨 순위판</h1><small>2026 독도의 날 · 10월 25일</small></div>
+    </div>
+    <span class="sync" id="sync">기록 불러오는 중</span>
+    <button class="btn primary" id="revealBtn">학급 순위 발표</button>
+    <button class="btn" id="adminBtn">관리 열기</button>
+    <button class="btn" id="fsBtn">전체 화면</button>
+  </header>
+  <main id="main"></main>
+  <section class="admin" id="admin" hidden></section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ▼▼ 구글 Apps Script 웹 앱 주소를 따옴표 안에 붙여 넣으세요 (goldenbell-apps-script.gs 안내 참고)
+const API_URL = "";
+const POLL_MS = 5000;
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2800);}
+const PREF_KEY="dokdo-gb-board";
+let config={metric:"avg",mask:false};
+try{ Object.assign(config,JSON.parse(localStorage.getItem(PREF_KEY)||"{}")); }catch(e){}
+function savePref(){ try{ localStorage.setItem(PREF_KEY,JSON.stringify(config)); }catch(e){} }
+function studentUrl(){ return new URL("goldenbell.html",location.href).href; }
+function showName(n){ n=String(n); if(!config.mask||n.length<2) return n; if(n.length===2) return n[0]+"○"; return n[0]+"○".repeat(n.length-2)+n[n.length-1]; }
+
+let results=[], view="board", adminOpen=false, reveal={order:[],shown:0}, lastFetch=0, lastSig="";
+let syncState={cls:"",text:"기록 불러오는 중"};
+
+/* ---------- ranking ---------- */
+function rankPeople(){
+  const list=results.slice().sort((a,b)=>b.score-a.score||b.correct-a.correct||a.at-b.at);
+  let prev=null,r=0; return list.map((x,i)=>{ const k=x.score+"|"+x.correct; if(k!==prev){r=i+1;prev=k;} return {...x,_r:r}; });
+}
+function rankClasses(){
+  const m=new Map();
+  results.forEach(x=>{ const k=x.g+"-"+x.c; const o=m.get(k)||{g:x.g,c:x.c,n:0,sum:0,golden:0}; o.n++; o.sum+=x.score; if(x.golden)o.golden++; m.set(k,o); });
+  const metric=config.metric||"avg";
+  const list=[...m.values()].map(o=>({...o,avg:o.sum/o.n,val:metric==="avg"?o.sum/o.n:o.sum}));
+  list.sort((a,b)=>b.val-a.val||b.n-a.n||a.g-b.g||a.c-b.c);
+  let prev=null,r=0; return list.map((x,i)=>{ const k=x.val.toFixed(2)+"|"+x.n; if(k!==prev){r=i+1;prev=k;} return {...x,_r:r}; });
+}
+const fmtVal=v=>(config.metric||"avg")==="avg"?v.toFixed(1):String(Math.round(v));
+
+/* ---------- render ---------- */
+function render(){
+  $("#revealBtn").textContent=view==="reveal"?"순위판으로":"학급 순위 발표";
+  $("#adminBtn").textContent=adminOpen?"관리 닫기":"관리 열기";
+  $("#admin").hidden=!adminOpen||view==="reveal";
+  const sy=$("#sync"); sy.className="sync "+syncState.cls; sy.textContent=syncState.text;
+  if(view==="reveal") renderReveal(); else renderBoard();
+  if(adminOpen&&view!=="reveal") renderAdmin();
+}
+function renderBoard(){
+  const people=rankPeople(), classes=rankClasses();
+  const golden=results.filter(r=>r.golden).length, avg=results.length?results.reduce((s,r)=>s+r.score,0)/results.length:0;
+  const top=[people[1],people[0],people[2]];
+  const medal=["2","1","3"], cls=["p2","p1","p3"];
+  const maxV=classes.length?Math.max(...classes.map(c=>c.val)):1;
+  $("#main").innerHTML=`<div class="board">
+    <section class="panel qrPanel">
+      <h2>도전하기</h2>
+      <div class="qr" id="qr"></div>
+      <p class="qrcap">휴대폰 카메라로 QR을 찍으세요</p>
+      <p class="link">${esc(studentUrl())}</p>
+      <div class="stats">
+        <div class="stat"><b>${results.length}</b><span>참여 인원</span></div>
+        <div class="stat"><b>${golden}</b><span>골든벨</span></div>
+        <div class="stat"><b>${avg.toFixed(1)}</b><span>평균 점수</span></div>
+        <div class="stat"><b>${classes.length}</b><span>참여 학급</span></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>개인 순위 <small>점수가 같으면 정답 수, 먼저 등록한 순</small></h2>
+      ${people.length?`<div class="podium">${top.map((p,i)=>p?`<div class="pod ${cls[i]}"><div class="medal">${p._r}위</div><div class="nm">${esc(showName(p.name))}${p.golden?'<span class="badge">골든벨</span>':""}</div><div class="cl">${p.g}학년 ${p.c}반 · 정답 ${p.correct}</div><div class="sc">${p.score}</div></div>`:`<div class="pod ${cls[i]} empty"><div class="medal">${medal[i]}위</div><div class="nm">-</div></div>`).join("")}</div>
+      <ol class="list">${people.slice(3,15).map(p=>`<li><span class="r">${p._r}</span><span class="n">${esc(showName(p.name))}<small>${p.g}-${p.c}</small>${p.golden?'<span class="badge">골든벨</span>':""}</span><span class="x">정답 ${p.correct}</span><span class="s">${p.score}</span></li>`).join("")}</ol>
+      ${people.length>15?`<p class="more">외 ${people.length-15}명 · 관리에서 전체 명단 확인</p>`:""}`
+      :`<div class="empty">아직 등록된 기록이 없어요.<br>학생들이 QR로 골든벨에 도전하고 기록 코드를 제출하면 여기에 순위가 나타나요.</div>`}
+    </section>
+    <section class="panel clsPanel">
+      <h2>학급 순위 <span class="seg" role="group" aria-label="학급 순위 기준"><button data-metric="avg" aria-pressed="${(config.metric||"avg")==="avg"}">평균</button><button data-metric="sum" aria-pressed="${config.metric==="sum"}">합계</button></span></h2>
+      ${classes.length?`<ol class="classes">${classes.map(c=>`<li class="c${c._r}"><span class="r">${c._r}</span><span class="k">${c.g}학년 ${c.c}반</span><span class="meter"><i style="width:${Math.max(4,c.val/maxV*100).toFixed(1)}%"></i><em>${c.n}명 참여${c.golden?` · 골든벨 ${c.golden}`:""}</em></span><span class="v">${fmtVal(c.val)}</span></li>`).join("")}</ol>`
+      :`<div class="empty">학생 기록이 들어오면 학년·반별 순위가 나타나요.</div>`}
+      <p class="hint">${(config.metric||"avg")==="avg"?"평균: 참여한 학생 점수의 평균":"합계: 참여한 학생 점수의 합 (많이 참여할수록 유리)"}</p>
+    </section>
+  </div>`;
+  drawQR();
+  document.querySelectorAll("[data-metric]").forEach(b=>b.onclick=()=>{ config.metric=b.dataset.metric; savePref(); render(); });
+}
+function drawQR(){
+  const el=$("#qr"); if(!el) return; el.innerHTML="";
+  const url=studentUrl();
+  if(!url){ el.innerHTML='<span class="none">관리에서 학생 링크를 넣어 주세요</span>'; return; }
+  if(typeof QRCode==="undefined"){ el.innerHTML='<span class="none">QR을 만들지 못했어요. 링크를 직접 알려 주세요.</span>'; return; }
+  try{ new QRCode(el,{text:url,width:512,height:512,colorDark:"#081A2C",colorLight:"#FFFFFF",correctLevel:QRCode.CorrectLevel.M}); }
+  catch(e){ el.innerHTML='<span class="none">QR을 만들지 못했어요.</span>'; }
+}
+
+function drawQR(){
+  const el=$("#qr"); if(!el) return; el.innerHTML="";
+  const url=studentUrl();
+  if(typeof QRCode==="undefined"){ el.innerHTML='<span class="none">QR을 만들지 못했어요. 링크를 직접 알려 주세요.</span>'; return; }
+  try{ new QRCode(el,{text:url,width:512,height:512,colorDark:"#081A2C",colorLight:"#FFFFFF",correctLevel:QRCode.CorrectLevel.M}); }
+  catch(e){ el.innerHTML='<span class="none">QR을 만들지 못했어요.</span>'; }
+}
+
+function renderAdmin(){
+  const people=rankPeople();
+  $("#admin").innerHTML=`
+  <section class="panel">
+    <h2>화면 설정</h2>
+    <label class="row" style="flex-direction:row;color:var(--ink)"><input type="checkbox" id="maskIn" ${config.mask?"checked":""}> 이름 가운데 글자 가리기 (예: 김○윤)</label>
+    <p class="hint">순위판 주소는 공개 주소라서, 화면에 이름 전체를 보이기 부담스러우면 켜 두세요. 시트에는 원래 이름이 그대로 남아요.</p>
+    <p class="hint">학생 접속 주소(QR): <b style="word-break:break-all">${esc(studentUrl())}</b></p>
+    <p class="hint">기록 새로고침: 5초마다 · 마지막 확인 ${lastFetch?new Date(lastFetch).toLocaleTimeString("ko-KR"):"-"}</p>
+  </section>
+  <section class="panel">
+    <h2>저장하기와 기록 관리</h2>
+    <div class="row"><button class="btn" id="csvPeople">개인 순위 CSV</button><button class="btn" id="csvClass">학급 순위 CSV</button></div>
+    <p class="hint">잘못된 기록을 지우거나 고치려면 구글 시트 '골든벨기록'에서 그 행을 직접 지우세요. 순위판에는 몇 초 안에 반영돼요.</p>
+  </section>
+  <section class="panel" style="grid-column:1/-1">
+    <h2>전체 명단 <small>${people.length}명</small></h2>
+    ${people.length?`<div class="tbl"><table><thead><tr><th>순위</th><th>학년</th><th>반</th><th>이름</th><th>점수</th><th>정답</th><th>도달</th></tr></thead><tbody>
+    ${people.map(p=>`<tr><td class="num">${p._r}</td><td class="num">${p.g}</td><td class="num">${p.c}</td><td>${esc(showName(p.name))}${p.golden?'<span class="badge">골든벨</span>':""}</td><td class="num">${p.score}</td><td class="num">${p.correct}</td><td class="num">Q${p.reached}</td></tr>`).join("")}
+    </tbody></table></div>`:`<p class="hint">아직 기록이 없어요.</p>`}
+  </section>`;
+  $("#maskIn").onchange=e=>{ config.mask=e.target.checked; savePref(); render(); };
+  $("#csvPeople").onclick=()=>saveCsv("개인", [["순위","학년","반","이름","점수","정답 수","도달 문제","골든벨"]].concat(rankPeople().map(p=>[p._r,p.g,p.c,p.name,p.score,p.correct,p.reached,p.golden?"O":""])));
+  $("#csvClass").onclick=()=>saveCsv("학급", [["순위","학년","반","참여 인원","평균 점수","합계 점수","골든벨"]].concat(rankClasses().map(c=>[c._r,c.g,c.c,c.n,c.avg.toFixed(1),c.sum,c.golden])));
+}
+
+/* ---------- reveal (class ranking, last to first) ---------- */
+function startReveal(){ const cls=rankClasses(); reveal={order:cls.slice().reverse(),shown:0}; view="reveal"; render(); }
+function renderReveal(){
+  const total=reveal.order.length, cls=rankClasses();
+  if(!total){ $("#main").innerHTML=`<div class="empty">발표할 학급 순위가 아직 없어요.</div>`; return; }
+  const shownSet=new Set(reveal.order.slice(0,reveal.shown).map(c=>c.g+"-"+c.c));
+  const justKey=reveal.shown?reveal.order[reveal.shown-1].g+"-"+reveal.order[reveal.shown-1].c:"";
+  const done=reveal.shown>=total;
+  $("#main").innerHTML=`<section class="reveal">
+    <h2>${done?"우리 학교 독도 골든벨 1위 학급!":"학급 순위 발표"}</h2>
+    <div class="row" style="justify-content:center"><button class="btn primary" id="nextRv" ${done?"disabled":""}>${done?"발표 끝":reveal.shown===total-1?"1위 공개!":`다음 공개 (${total-reveal.shown}학급 남음)`}</button><button class="btn" id="allRv">한 번에 모두 보기</button></div>
+    <div class="grid">${cls.map(c=>{const k=c.g+"-"+c.c, show=shownSet.has(k);
+      return `<div class="rv ${show?"":"hide"} ${show&&c._r===1?"top":""} ${k===justKey?"just":""}"><span class="r">${c._r}</span><span class="k">${show?`${c.g}학년 ${c.c}반`:"?학년 ?반"}<small>${show?`${c.n}명 참여${c.golden?` · 골든벨 ${c.golden}명`:""}`:"&nbsp;"}</small></span><span class="v">${show?fmtVal(c.val):"???"}</span></div>`;}).join("")}</div>
+  </section>`;
+  $("#nextRv").onclick=()=>{ reveal.shown=Math.min(total,reveal.shown+1); renderReveal(); if(reveal.shown===total) confetti(); };
+  $("#allRv").onclick=()=>{ reveal.shown=total; renderReveal(); confetti(); };
+}
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c=document.createElement("canvas"); c.className="confetti"; document.body.appendChild(c);
+  const x=c.getContext("2d"), W=c.width=innerWidth*devicePixelRatio, H=c.height=innerHeight*devicePixelRatio;
+  const cols=["#F4C430","#E2414E","#6E9FF0","#3E8E6B","#fff"];
+  const ps=Array.from({length:180},()=>({x:Math.random()*W,y:-Math.random()*H,r:(5+Math.random()*6)*devicePixelRatio,v:(2+Math.random()*3.5)*devicePixelRatio,a:Math.random()*6,c:cols[Math.random()*5|0]}));
+  let f=0;(function loop(){ x.clearRect(0,0,W,H); ps.forEach(p=>{p.y+=p.v;p.x+=Math.sin(p.a+=.05)*1.5;x.fillStyle=p.c;x.fillRect(p.x,p.y,p.r,p.r*.6);}); if(++f<360) requestAnimationFrame(loop); else c.remove(); })();
+}
+
+/* ---------- csv ---------- */
+function saveCsv(kind,rows){
+  const data="\uFEFF"+rows.map(r=>r.map(v=>{const t=String(v??"");return /[",\n]/.test(t)?`"${t.replace(/"/g,'""')}"`:t;}).join(",")).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([data],{type:"text/csv;charset=utf-8"})); a.download=`독도골든벨_${kind}순위.csv`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+
+/* ---------- polling ---------- */
+function setSync(cls,text){ syncState={cls,text}; const sy=$("#sync"); if(sy){ sy.className="sync "+cls; sy.textContent=text; } }
+async function poll(){
+  if(!API_URL){ setSync("warn","API_URL을 설정해 주세요"); return; }
+  try{
+    const res=await fetch(API_URL+(API_URL.includes("?")?"&":"?")+"t="+Date.now());
+    const j=await res.json(); if(!j.ok) throw new Error("bad");
+    lastFetch=Date.now();
+    const sig=JSON.stringify(j.results);
+    const before=results.length;
+    if(sig!==lastSig){
+      lastSig=sig; results=j.results.map((r,i)=>({...r,id:"r"+i}));
+      if(view!=="reveal") render();
+      if(before&&results.length>before) toast(`새 기록 ${results.length-before}개!`);
+    }
+    setSync("ok",`실시간 연결 · ${new Date(lastFetch).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`);
+  }catch(e){ setSync("warn","기록을 불러오지 못했어요. 다시 시도 중"); }
+}
+
+/* ---------- events & boot ---------- */
+$("#adminBtn").onclick=()=>{ adminOpen=!adminOpen; if(view==="reveal") view="board"; render(); if(adminOpen) $("#admin").scrollIntoView({behavior:"smooth"}); };
+$("#revealBtn").onclick=()=>{ if(view==="reveal"){ view="board"; render(); } else startReveal(); };
+$("#fsBtn").onclick=()=>{ (document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.())?.catch?.(()=>toast("전체 화면을 쓸 수 없어요")); };
+render();
+if(!API_URL) $("#main").insertAdjacentHTML("afterbegin",`<div class="empty" style="margin-bottom:16px">goldenbell-board.html 과 goldenbell.html 의 <b>API_URL</b>에 Apps Script 웹 앱 주소를 넣어 주세요. 설정 방법은 goldenbell-apps-script.gs 맨 위에 있어요.</div>`);
+poll(); setInterval(poll,POLL_MS);
+</script>
+</body>
+</html>
