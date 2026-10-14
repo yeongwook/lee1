@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>강치를 지켜라</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@500;700;800&display=swap">
+<style>
+/* Layout: one portrait game stage centered on the page; overlays for start and game-over sit on the stage.
+   Deliberately single theme: the East Sea under water, same in light and dark. */
+:root{
+  --deep:#06243D; --sea:#0B4A72; --foam:#CFE8F5; --ink:#F2F8FC; --mute:#9CC3DA;
+  --gold:#F4C430; --red:#E2414E; --panel:rgba(4,22,38,.82);
+  --f-display:"Black Han Sans","Gothic A1",system-ui,sans-serif;
+  --f-body:"Gothic A1",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--deep);color:var(--ink);font-family:var(--f-body);display:flex;align-items:center;justify-content:center;padding-inline:16px;padding-block:12px;box-sizing:border-box;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.stage{position:relative;width:min(100%, calc((100dvh - 24px) * 0.625));max-width:480px;aspect-ratio:5/8;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;pointer-events:none}
+.score{font-family:var(--f-display);font-size:clamp(22px,6vw,30px);text-shadow:0 2px 6px rgba(0,0,0,.4)}
+.lives{display:flex;gap:4px}
+.lives svg{width:24px;height:24px}
+.fact{position:absolute;left:12px;right:12px;top:58px;background:var(--panel);border:1px solid rgba(207,232,245,.25);border-radius:14px;padding:10px 14px;font-size:clamp(14px,3.6vw,16px);font-weight:700;line-height:1.45;word-break:keep-all;text-align:center;transition:opacity .4s;pointer-events:none}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:linear-gradient(180deg,rgba(6,36,61,.55),rgba(6,36,61,.88))}
+.overlay h1{font-family:var(--f-display);font-weight:400;font-size:clamp(40px,12vw,58px);margin:0;line-height:1.05;color:var(--gold);text-shadow:0 3px 0 rgba(0,0,0,.25)}
+.overlay p{margin:0;font-size:clamp(15px,4vw,18px);line-height:1.55;word-break:keep-all;color:var(--foam)}
+.howto{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;text-align:left;background:var(--panel);border-radius:14px;padding:14px 16px;font-weight:700;font-size:clamp(14px,3.8vw,16px)}
+.howto svg{width:34px;height:34px}
+.btn{border:0;border-radius:14px;background:var(--gold);color:#1E1600;font-family:var(--f-body);font-weight:800;font-size:clamp(18px,5vw,22px);padding:14px 30px;min-height:52px;cursor:pointer;box-shadow:0 4px 0 #B8860B}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #B8860B}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.big{font-family:var(--f-display);font-size:clamp(56px,16vw,80px);line-height:1;color:var(--ink)}
+.best{font-size:15px;color:var(--mute);font-weight:700}
+.lesson{background:var(--panel);border:1px solid rgba(244,196,48,.4);border-radius:14px;padding:14px 16px;font-weight:700;line-height:1.55;word-break:keep-all}
+.lesson b{color:var(--gold)}
+.small{font-size:12px;color:var(--mute)}
+@media (prefers-reduced-motion:reduce){.fact{transition:none}}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <canvas id="cv" aria-label="강치를 지켜라 게임 화면"></canvas>
+  <div class="hud" id="hud" hidden>
+    <div class="score" id="score">0점</div>
+    <div class="lives" id="lives" aria-label="남은 목숨"></div>
+  </div>
+  <div class="fact" id="fact" style="opacity:0"></div>
+
+  <div class="overlay" id="startScreen">
+    <h1>강치를<br>지켜라</h1>
+    <p>독도 바다에 살던 바다사자 '강치'가 되어<br>물고기는 먹고, 그물은 피하세요!</p>
+    <div class="howto">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="18" cy="20" rx="12" ry="7" fill="#FF9F43"/><path d="M29 20 L38 13 L38 27 Z" fill="#FF9F43"/><circle cx="12" cy="18" r="2" fill="#222"/></svg><span>물고기 = +10점</span>
+      <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="5" width="30" height="30" rx="6" fill="none" stroke="#C9B48A" stroke-width="3"/><path d="M5 15H35M5 25H35M15 5V35M25 5V35" stroke="#C9B48A" stroke-width="2"/></svg><span>그물에 3번 걸리면 끝</span>
+      <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 20h24M8 20l6-6M8 20l6 6M32 20l-6-6M32 20l-6 6" stroke="#CFE8F5" stroke-width="3" fill="none" stroke-linecap="round"/></svg><span>손가락으로 끌기 / ← → 키</span>
+    </div>
+    <button class="btn" id="startBtn">게임 시작</button>
+    <span class="best" id="bestStart"></span>
+  </div>
+
+  <div class="overlay" id="overScreen" hidden>
+    <p style="font-weight:800;color:var(--mute)">게임 끝</p>
+    <div class="big" id="finalScore">0</div>
+    <span class="best" id="bestOver"></span>
+    <div class="lesson">독도 강치는 일제강점기 <b>가죽과 기름을 얻으려는 남획</b>으로 수가 크게 줄어, 지금은 독도에서 볼 수 없어요.<br><b>독도의 날은 10월 25일!</b></div>
+    <button class="btn" id="againBtn">다시 하기</button>
+    <span class="small">디지털 역사 탐구부 예시 게임</span>
+  </div>
+</div>
+
+<script>
+const W=400, H=640;
+const cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+const $=id=>document.getElementById(id);
+const FACTS=[
+  "독도의 날(10월 25일)은 1900년 대한제국 칙령 제41호 반포를 기념하는 날이에요.",
+  "독도는 동도와 서도, 그리고 89개의 작은 섬으로 이루어져 있어요.",
+  "독도는 울릉도에서 약 87.4km 떨어져 있어요.",
+  "독도에는 괭이갈매기가 많이 살아요.",
+  "칙령 제41호에서는 독도를 '석도'라고 불렀어요.",
+  "세종실록지리지(1454)에는 맑은 날 우산(독도)과 무릉(울릉도)이 서로 보인다고 적혀 있어요.",
+  "강치는 예전에 독도 바위에 무리 지어 살던 바다사자예요.",
+  "1953년 울릉도 주민들이 독도의용수비대를 만들어 독도를 지켰어요."
+];
+
+let state="start", score=0, lives=3, items=[], bubbles=[], t=0, spawnT=0, lastTime=0, factIdx=0, nextFactAt=50, hitFlash=0, raf=0;
+const player={x:W/2, y:H-92, tx:W/2, r:34, bob:0};
+let best=0; try{ best=+localStorage.getItem("gangchi-best")||0; }catch(e){}
+let audio=null;
+
+/* ---------- sizing ---------- */
+function fit(){
+  const r=cv.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
+}
+new ResizeObserver(fit).observe(cv);
+
+/* ---------- sound ---------- */
+function beep(f,d=.1,v=.12,type="triangle"){
+  if(!audio) return;
+  try{ const o=audio.createOscillator(), g=audio.createGain(); o.type=type; o.frequency.value=f; g.gain.value=v; o.connect(g); g.connect(audio.destination); o.start(); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+d); o.stop(audio.currentTime+d+.02); }catch(e){}
+}
+
+/* ---------- input ---------- */
+function toLogicalX(clientX){ const r=cv.getBoundingClientRect(); return (clientX-r.left)/r.width*W; }
+cv.addEventListener("pointerdown",e=>{ player.tx=toLogicalX(e.clientX); cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove",e=>{ if(e.buttons||e.pointerType!=="mouse") player.tx=toLogicalX(e.clientX); else player.tx=toLogicalX(e.clientX); });
+const keys={};
+addEventListener("keydown",e=>{ if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ keys[e.key]=true; e.preventDefault(); } if((e.key===" "||e.key==="Enter")&&state!=="play"){ e.preventDefault(); start(); } });
+addEventListener("keyup",e=>{ keys[e.key]=false; });
+
+/* ---------- game flow ---------- */
+function updateHud(){
+  $("score").textContent=score+"점";
+  $("lives").innerHTML=[0,1,2].map(i=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.4 2.6.8-1.4 2.3-2.6 4.4-2.6 3.7 0 5.8 3.8 4.3 7.3C19.5 16.4 12 21 12 21z" fill="${i<lives?"#E2414E":"rgba(255,255,255,.25)"}"/></svg>`).join("");
+  $("lives").setAttribute("aria-label",`남은 목숨 ${lives}개`);
+}
+function showFact(text){
+  const f=$("fact"); f.textContent=text; f.style.opacity="1";
+  clearTimeout(showFact.h); showFact.h=setTimeout(()=>f.style.opacity="0",3600);
+}
+function start(){
+  if(!audio){ try{ audio=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  state="play"; score=0; lives=3; items=[]; t=0; spawnT=0; factIdx=0; nextFactAt=50; hitFlash=0;
+  player.x=player.tx=W/2;
+  $("startScreen").hidden=true; $("overScreen").hidden=true; $("hud").hidden=false;
+  updateHud(); beep(523,.12); setTimeout(()=>beep(784,.15),110);
+  lastTime=performance.now();
+}
+function gameOver(){
+  state="over";
+  if(score>best){ best=score; try{ localStorage.setItem("gangchi-best",String(best)); }catch(e){} }
+  $("finalScore").textContent=score+"점";
+  $("bestOver").textContent=`최고 기록 ${best}점`;
+  $("overScreen").hidden=false; $("hud").hidden=true; $("fact").style.opacity="0";
+  beep(330,.25,.14,"sawtooth"); setTimeout(()=>beep(220,.4,.12,"sawtooth"),200);
+  $("againBtn").focus();
+}
+$("startBtn").onclick=start; $("againBtn").onclick=start;
+$("bestStart").textContent=best?`최고 기록 ${best}점`:"";
+
+/* ---------- spawning ---------- */
+function level(){ return Math.min(1, score/400); }
+function spawn(){
+  const netChance=0.28+level()*0.17;
+  const isNet=Math.random()<netChance;
+  const speed=(150+level()*190)*(0.85+Math.random()*0.3);
+  items.push({type:isNet?"net":"fish", x:30+Math.random()*(W-60), y:-30, vy:speed, wob:Math.random()*6, r:isNet?26:18});
+}
+
+/* ---------- drawing ---------- */
+for(let i=0;i<26;i++) bubbles.push({x:Math.random()*W,y:Math.random()*H,r:1+Math.random()*3.5,v:12+Math.random()*28});
+function drawSea(dt){
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,"#1E7DB5"); g.addColorStop(.45,"#0B4A72"); g.addColorStop(1,"#06243D");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(255,255,255,.07)";
+  for(let i=0;i<5;i++){ ctx.beginPath(); const y=40+i*26; ctx.moveTo(0,y); for(let x=0;x<=W;x+=20) ctx.lineTo(x,y+Math.sin((x+t*40+i*50)/40)*4); ctx.lineTo(W,y+8); ctx.lineTo(0,y+8); ctx.fill(); }
+  ctx.fillStyle="#2B3F2E"; ctx.globalAlpha=.55;
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.quadraticCurveTo(60,H-40,120,H-18); ctx.quadraticCurveTo(200,H-6,260,H-26); ctx.quadraticCurveTo(330,H-46,W,H-14); ctx.lineTo(W,H); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.fillStyle="rgba(207,232,245,.35)";
+  bubbles.forEach(b=>{ b.y-=b.v*dt; if(b.y<-5){ b.y=H+5; b.x=Math.random()*W; } ctx.beginPath(); ctx.arc(b.x+Math.sin((b.y+t*30)/30)*3,b.y,b.r,0,Math.PI*2); ctx.fill(); });
+}
+function drawFish(it){
+  ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(Math.sin(t*6+it.wob)*.15+Math.PI/2);
+  ctx.fillStyle="#FF9F43"; ctx.beginPath(); ctx.ellipse(0,0,18,10,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(15,0); ctx.lineTo(28,-10); ctx.lineTo(28,10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#FFC37A"; ctx.beginPath(); ctx.ellipse(-2,3,9,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#1B1B1B"; ctx.beginPath(); ctx.arc(-10,-3,2.4,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawNet(it){
+  ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(Math.sin(t*2+it.wob)*.12);
+  const s=26;
+  ctx.fillStyle="rgba(201,180,138,.18)"; ctx.beginPath(); ctx.roundRect(-s,-s,s*2,s*2,8); ctx.fill();
+  ctx.strokeStyle="#C9B48A"; ctx.lineWidth=2.4;
+  ctx.beginPath(); ctx.roundRect(-s,-s,s*2,s*2,8); ctx.stroke();
+  ctx.lineWidth=1.6; ctx.beginPath();
+  for(let i=-s+10;i<s;i+=10){ ctx.moveTo(i,-s); ctx.lineTo(i,s); ctx.moveTo(-s,i); ctx.lineTo(s,i); }
+  ctx.stroke();
+  ctx.fillStyle="#E2414E"; ctx.beginPath(); ctx.arc(0,-s-5,6,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawGangchi(){
+  const x=player.x, y=player.y+Math.sin(player.bob)*3, tilt=Math.max(-.25,Math.min(.25,(player.tx-player.x)/120));
+  ctx.save(); ctx.translate(x,y); ctx.rotate(tilt);
+  if(hitFlash>0 && Math.floor(hitFlash*14)%2===0) ctx.globalAlpha=.4;
+  ctx.fillStyle="#4E4038";
+  ctx.beginPath(); ctx.ellipse(-26,40,16,7,-.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(26,40,16,7,.5,0,Math.PI*2); ctx.fill();
+  const body=ctx.createLinearGradient(0,-40,0,46); body.addColorStop(0,"#8A7462"); body.addColorStop(1,"#5E4D41");
+  ctx.fillStyle=body; ctx.beginPath(); ctx.moveTo(0,-30); ctx.bezierCurveTo(30,-26,34,22,22,40); ctx.quadraticCurveTo(0,50,-22,40); ctx.bezierCurveTo(-34,22,-30,-26,0,-30); ctx.fill();
+  ctx.fillStyle="#A8927E"; ctx.beginPath(); ctx.ellipse(0,14,14,22,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#5E4D41";
+  ctx.beginPath(); ctx.ellipse(-26,14,8,20,.45,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(26,14,8,20,-.45,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#8A7462"; ctx.beginPath(); ctx.arc(0,-38,20,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#B9A28D"; ctx.beginPath(); ctx.ellipse(0,-30,11,8,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#1B1512"; ctx.beginPath(); ctx.ellipse(0,-34,4,3,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-8,-44,3.4,0,Math.PI*2); ctx.arc(8,-44,3.4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-7,-45,1.2,0,Math.PI*2); ctx.arc(9,-45,1.2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.7)"; ctx.lineWidth=1;
+  ctx.beginPath(); [-1,1].forEach(sd=>{ [0,4].forEach(dy=>{ ctx.moveTo(sd*8,-29+dy); ctx.lineTo(sd*20,-31+dy*1.4); }); }); ctx.stroke();
+  ctx.restore();
+}
+
+/* ---------- loop ---------- */
+function loop(now){
+  raf=requestAnimationFrame(loop);
+  const dt=Math.min(.05,(now-lastTime)/1000||0); lastTime=now; t+=dt;
+  drawSea(dt);
+  if(state==="play"){
+    if(keys.ArrowLeft) player.tx-=380*dt;
+    if(keys.ArrowRight) player.tx+=380*dt;
+    player.tx=Math.max(34,Math.min(W-34,player.tx));
+    player.x+=(player.tx-player.x)*Math.min(1,dt*14);
+    player.bob+=dt*5;
+    spawnT-=dt;
+    if(spawnT<=0){ spawn(); spawnT=Math.max(.38,.95-level()*.5)*(0.8+Math.random()*.4); }
+    for(let i=items.length-1;i>=0;i--){
+      const it=items[i]; it.y+=it.vy*dt; it.x+=Math.sin(t*2+it.wob)*20*dt;
+      const dx=it.x-player.x, dy=it.y-(player.y-20);
+      if(Math.hypot(dx,dy)<it.r+player.r){
+        items.splice(i,1);
+        if(it.type==="fish"){ score+=10; beep(880+Math.random()*120,.08); if(score>=nextFactAt){ showFact(FACTS[factIdx%FACTS.length]); factIdx++; nextFactAt+=60; } }
+        else if(hitFlash<=0){ lives--; hitFlash=1; beep(180,.25,.15,"square"); if(navigator.vibrate) try{ navigator.vibrate(120); }catch(e){} if(lives<=0){ updateHud(); gameOver(); break; } }
+        updateHud(); continue;
+      }
+      if(it.y>H+40) items.splice(i,1);
+    }
+    if(hitFlash>0) hitFlash-=dt;
+  }
+  items.forEach(it=>it.type==="fish"?drawFish(it):drawNet(it));
+  drawGangchi();
+}
+document.addEventListener("visibilitychange",()=>{ lastTime=performance.now(); });
+fit(); updateHud(); requestAnimationFrame(t0=>{ lastTime=t0; loop(t0); });
+</script>
+</body>
+</html>
